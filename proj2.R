@@ -19,8 +19,8 @@ get.net <- function(beta, nc = 15) {
   probs <- matrix(beta %*% t(beta), n, n) * link_const # initialize probabilities for all pairings
   probs[h[col(probs)] == h[row(probs)] | col(probs) >= row(probs)] <- 0 # get rid of double counting
   rands <- matrix(runif(n * n), n, n)
-  probs[(probs - rands) <= 0] <- 0
-  probs[probs != 0] <- 1
+  probs[(probs - rands) >= 0] <- 1
+  probs[probs != 1] <- 0
   lapply(seq_along(beta), net_helper, probs)
 }
 
