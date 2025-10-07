@@ -51,11 +51,6 @@ nseir <- function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2, gamma = .
     R <- c(R, I[R_prob >= 0])
     I <- I[R_prob < 0]
 
-    # need to fix how this is calculated
-    # E_prob <- (prod(beta[pop %in% I]) * beta[pop %in% S] * infection_const) - runif(length(S))
-    # E <- c(E, S[E_prob >= 0])
-    # S <- S[E_prob < 0]
-
     if (length(I) == 0) {
       next
     }
@@ -69,29 +64,111 @@ nseir <- function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2, gamma = .
       next
     }
 
+    if (length(unlist(alink[I])) == 0) {
+      next
+    }
+
     # alternative for network exposures
     E_prob <- 1 - ((1 - alpha[2])**tabulate(unlist(alink[I]), nbins = n)[S]) - runif(length(S))
     E <- c(E, S[E_prob >= 0])
     S <- S[E_prob < 0]
 
-    for (i in I) {
-      # # each member of household exposed with prob alpha[1]
-      # household <- S[h[S] == h[i]]
-      # E_prob <- alpha[1] - runif(length(household))
-      # E <- c(E, household[E_prob >= 0])
+    if (length(I) == 0) {
+      next
+    }
 
-      # # each member of network exposed with prob alpha[2]
-      # network <- S[S %in% alink[i]]
-      # E_prob <- alpha[2] - runif(length(network))
-      # E <- c(E, network[E_prob >= 0])
+    # alternative for random exposures
+    E_prob <- 1 - ((t(matrix(beta[S], nrow = length(S), ncol = length(I))) * beta[I]) * infection_const)
+    E_prob <- 1 - apply(E_prob, 2, prod) - runif(length(S))
+    E <- c(E, S[E_prob >= 0])
+    S <- S[E_prob < 0]
+
+    S_out <- c(S_out, length(S))
+    E_out <- c(E_out, length(E))
+    I_out <- c(I_out, length(I))
+    R_out <- c(R_out, length(R))
+    sum_out <- c(sum_out, (length(S) + length(E) + length(I) + length(R)))
+    t <- c(t, day)
+  }
+  out <- list(S_out, E_out, I_out, R_out, sum_out, t)
+  names(out) <- c("S", "E", "I", "R", "Sum", "t")
+  out
+}
+
+nseir_2 <- function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2, gamma = .4, nc = 15, nt = 100, pinf = .005) {
+  n <- length(beta)
+  pop <- 1:n
+  I <- sample(pop, n * pinf) # randomly choose pinf% of population to start infected
+  S <- pop[!(pop %in% I)] # put rest of population in S
+  E <- c()
+  R <- c()
+  infection_const <- (alpha[3] * nc) / ((mean(beta)**2) * (n - 1))
+
+  S_out <- c(length(S))
+  E_out <- c(length(E))
+  I_out <- c(length(I))
+  R_out <- c(length(R))
+  sum_out <- c(length(S) + length(E) + length(I) + length(R))
+  t <- c(0)
+
+  for (day in 1:nt) {
+    # move from E to I with prob gamma
+    I_prob <- gamma - runif(length(E))
+    I <- c(I, E[I_prob >= 0])
+    E <- E[I_prob < 0]
+
+    # move from I to R with prob delta
+    R_prob <- delta - runif(length(I))
+    R <- c(R, I[R_prob >= 0])
+    I <- I[R_prob < 0]
+
+    # if (length(I) == 0) {
+    #   next
+    # }
+
+    # # alternative for household exposures
+    # E_prob <- 1 - (((1 - alpha[1])**tabulate(h[pop %in% I], nbins = max(h)))[h[S]]) - runif(length(S))
+    # E <- c(E, S[E_prob >= 0])
+    # S <- S[E_prob < 0]
+
+    # if (length(I) == 0) {
+    #   next
+    # }
+
+    # if (length(unlist(alink[I])) == 0) {
+    #   next
+    # }
+
+    # # alternative for network exposures
+    # E_prob <- 1 - ((1 - alpha[2])**tabulate(unlist(alink[I]), nbins = n)[S]) - runif(length(S))
+    # E <- c(E, S[E_prob >= 0])
+    # S <- S[E_prob < 0]
+
+    # if (length(I) == 0) {
+    #   next
+    # }
+
+    # # alternative for random exposures
+    # E_prob <- 1 - ((t(matrix(beta[S], nrow = length(S), ncol = length(I))) * beta[I]) * infection_const)
+    # E_prob <- 1 - apply(E_prob, 2, prod) - runif(length(S))
+    # E <- c(E, S[E_prob >= 0])
+    # S <- S[E_prob < 0]
+
+
+    for (i in I) {
+      # each member of household exposed with prob alpha[1]
+      household <- S[h[S] == h[i]]
+      E_prob <- alpha[1] - runif(length(household))
+      E <- c(E, household[E_prob >= 0])
+
+      # each member of network exposed with prob alpha[2]
+      network <- S[S %in% alink[i]]
+      E_prob <- alpha[2] - runif(length(network))
+      E <- c(E, network[E_prob >= 0])
 
       # random ppl exposed w prob beta[i]*beta[j]*infection_const
       E_prob <- (beta[i] * beta[pop %in% S] * infection_const) - runif(length(S))
       E <- c(E, S[E_prob >= 0])
-
-      # # maybe move this out of loop?
-      # E <- unique(E)
-      # S <- S[!(S %in% E)]
     }
 
     E <- unique(E)
@@ -119,21 +196,14 @@ alink <- get.net(beta, h, nc)
 # print("here")
 # print(system.time(s1 <- nseir(beta, h, alink, pinf = 0.5, nt = 2)))
 
-print(system.time(s1 <- nseir(beta, h, alink)))
+print(system.time(s1 <- nseir(beta, h, alink, pinf = 0.5)))
+print(system.time(s2 <- nseir_2(beta, h, alink, pinf = 0.5)))
 # s2 <- nseir(beta, h, alink, alpha = c(0, 0, 0.04))
 # const_beta <- rep(mean(beta), length(beta))
 # s3 <- nseir(const_beta, h, alink)
 # s4 <- nseir(const_beta, h, alink, alpha = c(0, 0, 0.04))
 
-
-# layout(matrix(c(1,1),nrow=2,ncol=3,byrow=TRUE))
-# par(mfcol = c(2, 3), mar = c(4, 4, 1, 1))
-# hist(beta)
-# hist(const_beta)
-# hist(const_beta)
 # plot(s1$t, s1$S, xlab = "day", ylim = c(0, n))
 # points(s1$t, s1$I, col = 4)
 # points(s1$t, s1$E, col = 3)
 # points(s1$t, s1$R, col = 2)
-# plot(s2$t, s2$S, xlab = "day", ylim = c(0, n))
-# plot(s3$t, s3$S, xlab = "day", ylim = c(0, n))
