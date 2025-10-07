@@ -17,10 +17,9 @@ get.net <- function(beta, h, nc = 15) {
   n <- length(beta)
   link_const <- nc / ((mean(beta)**2) * (n - 1))
   probs <- matrix(beta %*% t(beta), n, n) * link_const # initialize probabilities for all pairings
-  probs[h[col(probs)] == h[row(probs)] | col(probs) >= row(probs)] <- 0 # get rid of double counting
+  probs[col(probs) >= row(probs)] <- 0 # get rid of double counting
   rands <- matrix(runif(n * n), n, n)
   probs[(probs - rands) >= 0] <- 1
-  probs[probs != 1] <- 0
   lapply(seq_along(beta), net_helper, probs)
 }
 
@@ -41,9 +40,6 @@ nseir <- function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2, gamma = .
   sum_out <- c(length(S) + length(E) + length(I) + length(R))
   t <- c(0)
 
-  # E_prob <- (prod(beta[pop %in% I]) * beta[pop %in% S] * infection_const) - runif(length(S))
-  # E <- c(E, S[E_prob >= 0])
-
   for (day in 1:nt) {
     # move from E to I with prob gamma
     I_prob <- gamma - runif(length(E))
@@ -54,6 +50,11 @@ nseir <- function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2, gamma = .
     R_prob <- delta - runif(length(I))
     R <- c(R, I[R_prob >= 0])
     I <- I[R_prob < 0]
+
+    # need to fix how this is calculated
+    # E_prob <- (prod(beta[pop %in% I]) * beta[pop %in% S] * infection_const) - runif(length(S))
+    # E <- c(E, S[E_prob >= 0])
+    # S <- S[E_prob < 0]
 
     for (i in I) {
       # each member of household exposed with prob alpha[1]
@@ -89,13 +90,15 @@ nseir <- function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2, gamma = .
 
 # part 4
 n <- 10000
+nc <- 15
 h <- get_h(n)
 beta <- runif(n)
-alink <- get.net(beta, h, 10)
+alink <- get.net(beta, h, nc)
+# print(system.time())
 # print("here")
 # s1 <- nseir(beta, h, alink, pinf = 0.5, nt = 2)
 
-print(system.time(s1 <- nseir(beta, h, alink, pinf = 0.5, nt = 2)))
+# s1 <- nseir(beta, h, alink)
 # s2 <- nseir(beta, h, alink, alpha = c(0, 0, 0.04))
 # const_beta <- rep(mean(beta), length(beta))
 # s3 <- nseir(const_beta, h, alink)
@@ -107,9 +110,9 @@ print(system.time(s1 <- nseir(beta, h, alink, pinf = 0.5, nt = 2)))
 # hist(beta)
 # hist(const_beta)
 # hist(const_beta)
-# plot(s1$t, s1$S, xlab = "day", ylim = c(0, n))
+plot(s1$t, s1$S, xlab = "day", ylim = c(0, n))
+points(s1$t, s1$I, col = 4)
+points(s1$t, s1$E, col = 3)
+points(s1$t, s1$R, col = 2)
 # plot(s2$t, s2$S, xlab = "day", ylim = c(0, n))
 # plot(s3$t, s3$S, xlab = "day", ylim = c(0, n))
-# points(s1$t, s1$I, col = 4)
-# points(s1$t, s1$E,col=3)
-# points(s1$t, s1$R,col=2)
