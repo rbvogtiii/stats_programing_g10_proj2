@@ -53,6 +53,12 @@ nseir <- function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2, gamma = .
     I <- I[R_prob < 0]
 
     if (length(I) == 0) {
+      S_out <- c(S_out, length(S))
+      E_out <- c(E_out, length(E))
+      I_out <- c(I_out, length(I))
+      R_out <- c(R_out, length(R))
+      sum_out <- c(sum_out, (length(S) + length(E) + length(I) + length(R)))
+      t <- c(t, day)
       next
     }
 
@@ -62,25 +68,43 @@ nseir <- function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2, gamma = .
     S <- S[E_prob < 0]
 
     if (length(I) == 0) {
-      next
-    }
-
-    if (length(unlist(alink[I])) == 0) {
-      next
-    }
-
-    # alternative for network exposures
-    E_prob <- 1 - ((1 - alpha[2])**tabulate(unlist(alink[I]), nbins = n)[S]) - runif(length(S))
-    E <- c(E, S[E_prob >= 0])
-    S <- S[E_prob < 0]
-
-    if (length(I) == 0) {
+      S_out <- c(S_out, length(S))
+      E_out <- c(E_out, length(E))
+      I_out <- c(I_out, length(I))
+      R_out <- c(R_out, length(R))
+      sum_out <- c(sum_out, (length(S) + length(E) + length(I) + length(R)))
+      t <- c(t, day)
       next
     }
 
     # alternative for random exposures
     E_prob <- 1 - ((t(matrix(beta[S], nrow = length(S), ncol = length(I))) * beta[I]) * infection_const)
     E_prob <- 1 - apply(E_prob, 2, prod) - runif(length(S))
+    E <- c(E, S[E_prob >= 0])
+    S <- S[E_prob < 0]
+
+    if (length(I) == 0) {
+      S_out <- c(S_out, length(S))
+      E_out <- c(E_out, length(E))
+      I_out <- c(I_out, length(I))
+      R_out <- c(R_out, length(R))
+      sum_out <- c(sum_out, (length(S) + length(E) + length(I) + length(R)))
+      t <- c(t, day)
+      next
+    }
+
+    if (length(unlist(alink[I])) == 0) {
+      S_out <- c(S_out, length(S))
+      E_out <- c(E_out, length(E))
+      I_out <- c(I_out, length(I))
+      R_out <- c(R_out, length(R))
+      sum_out <- c(sum_out, (length(S) + length(E) + length(I) + length(R)))
+      t <- c(t, day)
+      next
+    }
+
+    # alternative for network exposures
+    E_prob <- 1 - ((1 - alpha[2])**tabulate(unlist(alink[I]), nbins = n)[S]) - runif(length(S))
     E <- c(E, S[E_prob >= 0])
     S <- S[E_prob < 0]
 
