@@ -121,6 +121,15 @@ nseir <- function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2, gamma = .
 }
 
 # part 4
+plot_nseir <- function(sim, beta) {
+  plot(sim$t, sim$S, type = "l", xlab = "day", ylim = c(0, max(sim$S)))
+  lines(sim$t, sim$E, col = 2)
+  lines(sim$t, sim$I, col = 3)
+
+  hist(beta)
+}
+
+# part 5
 n <- 10000
 nc <- 15
 h <- get_h(n)
@@ -133,6 +142,11 @@ const_beta <- rep(mean(beta), length(beta))
 alink <- get.net(const_beta, h, nc)
 s3 <- nseir(const_beta, h, alink)
 s4 <- nseir(const_beta, h, alink, alpha = c(0, 0, 0.04))
+
+# plot_nseir(s1, beta)
+# plot_nseir(s2, beta)
+# plot_nseir(s3, const_beta)
+# plot_nseir(s4, const_beta)
 
 plot(s1$t, s1$S, type = "l", xlab = "day", ylim = c(0, n))
 lines(s1$t, s1$I)
