@@ -16,10 +16,11 @@ net_helper <- function(idx, probs) { # creates a list of connections for the giv
 get.net <- function(beta, h, nc = 15) {
   n <- length(beta)
   link_const <- nc / ((mean(beta)**2) * (n - 1))
-  probs <- matrix(beta %*% t(beta), n, n) * link_const # initialize probabilities for all pairings
-  probs[col(probs) >= row(probs) | h[col(probs) == h[row(probs)]]] <- 0 # get rid of double counting
+  probs <- outer(beta, beta) * link_const # initialize probabilities for all pairings
+  for (i in 1:n) probs[i, i:n] <- 0 # get rid of double counting
+  probs[outer(h, h, FUN = "==")] <- 0 # remove connections within households
   rands <- matrix(runif(n * n), n, n)
-  probs[(probs - rands) >= 0] <- 1
+  probs[probs >= rands] <- 1
   lapply(seq_along(beta), net_helper, probs)
 }
 
@@ -78,6 +79,7 @@ nseir <- function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2, gamma = .
     }
 
     # alternative for random exposures
+    # update to use outer
     E_prob <- 1 - ((t(matrix(beta[S], nrow = length(S), ncol = length(I))) * beta[I]) * infection_const)
     E_prob <- 1 - apply(E_prob, 2, prod) - runif(length(S))
     E <- c(E, S[E_prob >= 0])
@@ -158,16 +160,16 @@ n <- 10000
 nc <- 15
 h <- get_h(n)
 beta <- runif(n)
-print(system.time(alink <- get.net(beta, h, nc)))
+alink <- get.net(beta, h, nc)
 
-# print(system.time(s1 <- nseir(beta, h, alink, pinf = 0.005)))
-# print(system.time(s2 <- nseir_2(beta, h, alink, pinf = 0.005)))
-# plot(s1$E, ylim = c(0, max(s1$S, s2$S)))
-# points(s1$I)
-# points(s1$S)
-# points(s2$E, col = 2)
-# points(s2$I, col = 2)
-# points(s2$S, col = 2)
+# print(system.time(s1 <- nseir(beta, h, alink, pinf = 0.5)))
+# print(system.time(s2 <- nseir_2(beta, h, alink, pinf = 0.5)))
+# plot(s1$E, type='l', ylim = c(0, max(s1$S, s2$S)))
+# lines(s1$I)
+# lines(s1$S)
+# lines(s2$E, col = 2)
+# lines(s2$I, col = 2)
+# lines(s2$S, col = 2)
 
 s1 <- nseir(beta, h, alink)
 s2 <- nseir(beta, h, alink, alpha = c(0, 0, 0.04))
@@ -176,19 +178,18 @@ alink <- get.net(const_beta, h, nc)
 s3 <- nseir(const_beta, h, alink)
 s4 <- nseir(const_beta, h, alink, alpha = c(0, 0, 0.04))
 
-layout(matrix(c(1,2,3,4),2,2))
-plot(s1$t, s1$S, xlab = "day", ylim = c(0, n))
-points(s1$t, s1$I, col = 4)
-points(s1$t, s1$E, col = 3)
+plot(s1$t, s1$S, type = "l", xlab = "day", ylim = c(0, n))
+lines(s1$t, s1$I)
+# lines(s1$t, s1$E)
 
-plot(s2$t, s2$S, xlab = "day", ylim = c(0, n))
-points(s2$t, s2$I, col = 4)
-points(s2$t, s2$E, col = 3)
+lines(s2$t, s2$S, col = 2)
+lines(s2$t, s2$I, col = 2)
+# lines(s2$t, s2$E, col = 2)
 
-plot(s3$t, s3$S, xlab = "day", ylim = c(0, n))
-points(s3$t, s3$I, col = 4)
-points(s3$t, s3$E, col = 3)
+lines(s3$t, s3$S, col = 3)
+lines(s3$t, s3$I, col = 3)
+# lines(s3$t, s3$E, col = 3)
 
-plot(s4$t, s4$S, xlab = "day", ylim = c(0, n))
-points(s4$t, s4$I, col = 4)
-points(s4$t, s4$E, col = 3)
+lines(s4$t, s4$S, col = 4)
+lines(s4$t, s4$I, col = 4)
+# lines(s4$t, s4$E, col = 4)
