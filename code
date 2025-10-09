@@ -1,62 +1,53 @@
-# This script defines and runs a stochastic SEIR simulation that includes
-# household structure and a regular contact network.
+# Generate household structure for a population.
+# input n The total population size.
+# input hmax The maximum household size.
+# output An integer vector of length n, where the value at index i is the household ID for person i.
 
 
+# This function creates a vector of household assignments for n individuals.
 
-## DO THIS AS A ONE LINER
-
-#' Generate household structure for a population.
-#' relevance Creates a vector of household IDs for a population of size n.
-#' input n The total population size.
-#' input hmax The maximum household size.
-#' output An integer vector of length n, where the value at index i
-#'        is the household ID for person i.
 create_households <- function(n, hmax = 5) {
-  h <- integer(n)
-  person_id <- 1 # Initialize the counter for the current person being assigned to a household.
-  currenthousehold_id <- 1 # Initialize the counter for the current household ID.
-  
-  while (person_id <= n) { # Loop until every person in the population has been assigned to a household.
-    new_household <- sample(1:hmax, 1) # For each new household, randomly sample its size from 1 to the maximum allowed size (hmax).
-    actual_size <- min(new_household, n - person_id + 1) # Calculate the actual size of this household, ensuring it doesn't exceed the number of remaining people.
-    last_person_id <- person_id + actual_size - 1  # Determine the index of the last person to be added to this household.
-    h[person_id:last_person_id] <- currenthousehold_id  # Assign the current household ID to all individuals in this newly formed household.
-    person_id <- person_id + actual_size   # Update the person_id to the next unassigned person.
-    currenthousehold_id <- currenthousehold_id + 1     # Increment the household ID for the next household.
-  }
+  h <- rep(1:n, times = sample(1:hmax, n, replace = TRUE))[1:n]
   return(h)   # Return the completed vector of household assignments
 }
 
+# This function creates a random network where the probability of a link forming between any two people is proportional to the product of their sociability parameter (beta).
+# Connections are not allowed between people who belong to the same household. (i.e we generate a random contact network)
 
+# input beta A numeric vector of length n. beta[i] is the sociability weighting factor for person i.
+# input h A numeric or character vector of length `n`, where `h[i]` is the  household ID for person i. This is required to prevent intra-household links.
+# input nc An integer specifying the number of non-household contacts per person. Defaults to 15.
+# output A list of length n. The i-th element of the list is an integer vector containing the indices of the network contacts of person i.
 
-
-## MAKE THIS MORE EFFICIENT; NO FOR LOOPS CONSTANTLY 
-
-
-
-#' Generate a random contact network.
-#' relevance Creates a network based on sociability, excluding household members.
-#' input beta A numeric vector of sociability parameters for each person.
-#' input h The household structure vector.
-#' input nc The average number of contacts per person.
-#' output A list where element i contains a sorted integer vector of contacts for person i.
-get.net <- function(beta, h, nc = 15) {
-  n <- length(beta) # Get the total population size from the length of the beta vector.
-  alink <- vector("list", n) # Initialize an empty list. Each element will store the contacts for one person (an adjacency list).
-  
-  mean_beta_sq <- mean(beta)^2 # Calculate the squared mean of the sociability parameter. This is used for normalization.
-  prob_const <- nc / (mean_beta_sq * (n - 1)) # Calculate a constant, ensuring that the expected average number of contacts per person in the network is approximately 'nc'.
-  
-  for (i in 1:(n - 1)) { # Loop through every unique pair of individuals (i, j) in the population. This nested loop structure ensures each pair is considered only once.
-    for (j in (i + 1):n) {
-      if (h[i] != h[j]) { # Check if the two individuals are NOT in the same household.
-        prob_link <- prob_const * beta[i] * beta[j] # Calculate the probability of a link forming between i and j. It's proportional to the product of their sociability scores (beta).
-        if (runif(1) < prob_link) { # Perform a stochastic check
-          alink[[i]] <- c(alink[[i]], j)  # If the check passes, add j to i's contact list.
-          alink[[j]] <- c(alink[[j]], i)  # And add i to j's contact list, making the network undirected 
-        }
-      }
-    }
+net_helper <- function(idx, adj_matrix) {
+  connections <- which(adj_matrix[idx, ])
+  if (length(connections) == 0) {
+    return(NULL)
+  } else {
+    return(connections)
   }
-  return(alink) # Return the final network structure (adjacency list).
 }
+
+# Main network generation function 
+get.net <- function(beta, h, nc = 15) { 
+  # n is determined by the length of the beta vector
+  n <- length(beta)
+  
+  prob_const <- nc / (mean(beta)^2 * (n - 1))
+  probs <- outer(beta, beta, `*`) * prob_const
+  
+  diag(probs) <- 0
+  
+  is_same_household <- outer(h, h, `==`)
+  probs[is_same_household] <- 0
+  
+  rands <- matrix(runif(n * n), n, n)
+  rands[lower.tri(rands)] <- t(rands)[lower.tri(rands)]
+  
+  adj_matrix <- rands < probs
+  
+  network_list <- lapply(1:n, net_helper, adj_matrix)
+
+  return(network_list)
+}
+
