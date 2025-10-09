@@ -2,6 +2,9 @@
 # household structure and a regular contact network.
 
 
+
+## DO THIS AS A ONE LINER
+
 #' Generate household structure for a population.
 #' relevance Creates a vector of household IDs for a population of size n.
 #' input n The total population size.
@@ -23,6 +26,12 @@ create_households <- function(n, hmax = 5) {
   }
   return(h)   # Return the completed vector of household assignments
 }
+
+
+
+
+## MAKE THIS MORE EFFICIENT; NO FOR LOOPS CONSTANTLY 
+
 
 
 #' Generate a random contact network.
