@@ -61,9 +61,147 @@ get.net <- function(beta, h, nc = 15) {
 }
 
 
+# Defintion A highly optimized version of the nseir function. This implementation avoids the slow 'for' loop over infectious individuals by vectorizing 
+# the calculation of infection probabilities across the entire susceptible population.
+#' input beta An n-vector of sociability parameters (βi) for each person.
+#' input h An n-vector of household assignments.
+#' input alink A list defining the regular (non-household) contacts for each person.
+#' input alpha A vector of 3 infection probabilities: c(α_h, α_c, α_r) for household, 
+#'        contact, and random mixing, respectively.
+#' input delta The daily probability of an Exposed person becoming Infectious (E -> I).
+#' input gamma The daily probability of an Infectious person Recovering (I -> R).
+#' input nc The average number of contacts per person, used for random mixing.
+#' input nt The number of days to simulate.
+#' input pinf The proportion of the population to start in the Infectious state.
+#' output A list with elements S, E, I, R (daily population counts) and t (day number).
+
+nseir<- function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2, gamma = .4, nc = 15, nt = 100, pinf = .005) {
+  n <- length(beta)
+  alpha_h <- alpha[1]; alpha_c <- alpha[2]; alpha_r <- alpha[3]
+  status <- rep(1, n)
+  status[sample(n, max(1, round(n * pinf)))] <- 3
+  
+  S <- E <- I <- R <- numeric(nt)
+  counts <- tabulate(status, nbins = 4)
+  S[1] <- counts[1]; E[1] <- counts[2]; I[1] <- counts[3]; R[1] <- counts[4]
+  random_const <- (alpha_r * nc) / (mean(beta)^2 * (n - 1))
+  
+  # Main Simulation Loop
+  for (t in 2:nt) {
+    s_idx <- which(status == 1)
+    e_idx <- which(status == 2)
+    i_idx <- which(status == 3)
+    
+    if (length(e_idx) == 0 && length(i_idx) == 0) {
+      S[t:nt] <- S[t-1]; E[t:nt] <- 0; I[t:nt] <- 0; R[t:nt] <- R[t-1]
+      break 
+    }
+    
+    # State Transitions
+    # I -> R and E -> I transitions are already fast
+    if (length(i_idx) > 0) status[i_idx[runif(length(i_idx)) < gamma]] <- 4
+    if (length(e_idx) > 0) status[e_idx[runif(length(e_idx)) < delta]] <- 3
+    
+    # S -> E Transition
+    if (length(s_idx) > 0 && length(i_idx) > 0) {
+      
+      # Initialize probability of *avoiding* infection for each susceptible person
+      p_avoid <- rep(1, length(s_idx))
+      
+      # a) Household Infection 
+      i_by_hh <- table(h[i_idx]) # Count infected in each household
+      s_hh_id <- h[s_idx] # Get household ID for each susceptible
+      k <- i_by_hh[as.character(s_hh_id)] # Lookup count of infected for each susceptible 
+      k[is.na(k)] <- 0 # If household has no infected, count is 0
+      p_avoid <- p_avoid * ((1 - alpha_h)^k) # Probability of avoiding infection from k infectious housemates
+      
+      # b) Regular Contact Infection
+      is_inf <- status == 3 # Create a logical vector for quick lookups
+      m <- unlist(lapply(alink[s_idx], function(contacts) sum(is_inf[contacts])))
+      p_avoid <- p_avoid * ((1 - alpha_c)^m)
+      
+      # c) Random Mixing Infection 
+      # This calculates the total random mixing pressure from all infected at once
+      total_random_pressure <- random_const * sum(beta[i_idx]) * beta[s_idx]
+      p_avoid <- p_avoid * exp(-total_random_pressure)
+      
+      # Final Bernoulli trial to find newly exposed individuals
+      p_infect <- 1 - p_avoid
+      newly_exposed_idx <- s_idx[runif(length(s_idx)) < p_infect]
+      status[newly_exposed_idx] <- 2
+    }
+    
+    # Record Results
+    counts <- tabulate(status, nbins = 4)
+    S[t] <- counts[1]; E[t] <- counts[2]; I[t] <- counts[3]; R[t] <- counts[4]
+  }
+  
+  return(list(S = S, E = E, I = I, R = R, t = 1:nt))
+}
+
+
+
 n <- 1000     
 nc <- 15       
 hmax <- 5      
-h <- create_households(n = n, hmax = hmax)
-beta <- runif(n, min = 0.0, max = 1.0) 
-alink <- get.net(beta = beta, h = h, nc = nc)
+# print(paste("Resulting average number of connections:", round(avg_connections, 4)))
+
+timing_results <- system.time({
+  h <- create_households(n = n, hmax = hmax)
+  beta_base_variable <- runif(n, 0.0, 1.0) 
+  alink_results <- get.net(beta = beta_base_variable, h = h, nc = nc)
+  seir_results <- nseir(beta = beta_base_variable, h = h, alink = alink_results, nt = 100)
+})
+print(timing_results)
+
+
+# Defintion This function plots the simulation dynamics
+plot_seir <- function(seir_results, main_title) {
+  total_pop <- sum(seir_results$S[1], seir_results$E[1], seir_results$I[1], seir_results$R[1])
+  plot(seir_results$t, seir_results$S, type = "l", col = "black", lwd = 2, 
+       ylim = c(0, total_pop), xlab = "Time (Days)", ylab = "N",
+       main = main_title, panel.first = grid(col = "gray", lty = "dotted"))
+  lines(seir_results$t, seir_results$E, col = "green", lwd = 2)
+  lines(seir_results$t, seir_results$I, col = "red", lwd = 2.5)
+  lines(seir_results$t, seir_results$R, col = "blue", lwd = 2)
+  legend("topright", legend = c("Susceptible", "Exposed", "Infected", "Recovered"),
+         col = c("black", "green","red","blue"),
+         lwd = c(2, 2, 2.5, 2), lty = 1, bty = "n")
+}
+
+plot_seir(seir_results, main_title = "SEIR Epidemic Dynamics")
+
+
+# Running the Four Scenarios as per the instructions:
+# Scenario 1.
+cat("Running Scenario 1: Full Model (Variable β)...\n")
+results_scen1 <- nseir(beta = beta_base_variable, h = h, alink = alink_results, nt = nt)
+
+# Scenario 2.
+cat("Running Scenario 2: Random Mixing Only (Variable β)...\n")
+alpha_scen2 <- c(0, 0, 0.04)
+results_scen2 <- nseir(beta = beta_base_variable, h = h, alink = alink_results, alpha = alpha_scen2, nt = nt)
+
+# Scenario 3: 
+cat("Running Scenario 3: Full Model (Constant β)...\n")
+beta_scen3_constant <- rep(mean(beta_base_variable), n)
+results_scen3 <- nseir(beta = beta_scen3_constant, h = h, alink = alink_results, nt = nt)
+
+# Scenario 4.
+cat("Running Scenario 4: Random Mixing Only (Constant β)...\n")
+results_scen4 <- nseir(beta = beta_scen3_constant, h = h, alink = alink_results, alpha = alpha_scen2, nt = nt)
+
+
+cat("Generating comparison plots...\n")
+par(mfrow = c(2, 2), mar = c(4, 4, 3, 1), oma = c(0, 0, 3, 0))
+
+plot_seir(results_scen1, "1: Full Model (Variable β)")
+plot_seir(results_scen2, "2: Random Mixing Only (Variable β)")
+plot_seir(results_scen3, "3: Full Model (Constant β)")
+plot_seir(results_scen4, "4: Random Mixing Only (Constant β)")
+
+# Add an overall title
+mtext("Comparison of Four Epidemic Scenarios", outer = TRUE, cex = 1.5)
+
+# Reset graphics device to default
+par(mfrow = c(1, 1))
