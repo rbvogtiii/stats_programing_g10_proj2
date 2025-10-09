@@ -1,53 +1,69 @@
-# Generate household structure for a population.
+# This function creates a vector of household assignments for n individuals
+
 # input n The total population size.
 # input hmax The maximum household size.
 # output An integer vector of length n, where the value at index i is the household ID for person i.
-
-
-# This function creates a vector of household assignments for n individuals.
 
 create_households <- function(n, hmax = 5) {
   h <- rep(1:n, times = sample(1:hmax, n, replace = TRUE))[1:n]
   return(h)   # Return the completed vector of household assignments
 }
 
-# This function creates a random network where the probability of a link forming between any two people is proportional to the product of their sociability parameter (beta).
+# Defintion Helper function for get.net
+# Relevance # This function creates a random network where the probability of a link forming between any two people is proportional to the product of their sociability parameter (beta).
 # Connections are not allowed between people who belong to the same household. (i.e we generate a random contact network)
+
+# input idx The index of the person (row in the matrix).
+# input adj_matrix The symmetric adjacency matrix where TRUE indicates a link.
+# output A vector of indices for person idx's contacts, or NULL if they have none.
+
+net_helper <- function(idx, adj_matrix) {
+  connections <- which(adj_matrix[idx, ])
+  if (length(connections) == 0) {
+    return(NULL) 
+  } else {
+    return(connections)
+  }
+}
+
+
+
+# Defintion Generate a random contact network.
+# Relevance Implements step 2 of the practical[cite: 28]. This function creates a random 
+# network where link probability is based on individual 'sociability' parameters (beta).
 
 # input beta A numeric vector of length n. beta[i] is the sociability weighting factor for person i.
 # input h A numeric or character vector of length `n`, where `h[i]` is the  household ID for person i. This is required to prevent intra-household links.
 # input nc An integer specifying the number of non-household contacts per person. Defaults to 15.
 # output A list of length n. The i-th element of the list is an integer vector containing the indices of the network contacts of person i.
 
-net_helper <- function(idx, adj_matrix) {
-  connections <- which(adj_matrix[idx, ])
-  if (length(connections) == 0) {
-    return(NULL)
-  } else {
-    return(connections)
-  }
-}
 
-# Main network generation function 
-get.net <- function(beta, h, nc = 15) { 
-  # n is determined by the length of the beta vector
+get.net <- function(beta, h, nc = 15) {
   n <- length(beta)
   
-  prob_const <- nc / (mean(beta)^2 * (n - 1))
-  probs <- outer(beta, beta, `*`) * prob_const
+  prob_const <- nc / (mean(beta)^2 * (n - 1)) # Calculate the linking probability constant from the formula in the practical.
   
-  diag(probs) <- 0
+  probs <- outer(beta, beta, `*`) * prob_const # Create a matrix of link probabilities for every pair (i, j)
   
-  is_same_household <- outer(h, h, `==`)
+  diag(probs) <- 0 # People cannot have links with themselves
+  
+  is_same_household <- outer(h, h, `==`) # Exclude links between people in the same household 
   probs[is_same_household] <- 0
   
-  rands <- matrix(runif(n * n), n, n)
+  rands <- matrix(runif(n * n), n, n) # Create a symmetric matrix of random numbers to ensure links are not created twice 
   rands[lower.tri(rands)] <- t(rands)[lower.tri(rands)]
   
-  adj_matrix <- rands < probs
+  adj_matrix <- rands < probs # A link exists if the random number is less than the calculated probability
   
-  network_list <- lapply(1:n, net_helper, adj_matrix)
-
-  return(network_list)
+  alink <- lapply(1:n, net_helper, adj_matrix) # Use the helper function to create the final list of connections for each person
+  
+  return(alink) # Return the final network structure (adjacency list)
 }
 
+
+n <- 1000     
+nc <- 15       
+hmax <- 5      
+h <- create_households(n = n, hmax = hmax)
+beta <- runif(n, min = 0.0, max = 1.0) 
+alink <- get.net(beta = beta, h = h, nc = nc)
