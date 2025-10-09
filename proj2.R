@@ -5,11 +5,12 @@ get_h <- function(n, hmax = 5) {
 
 ## part 2
 net_helper <- function(idx, probs) { # creates a list of connections for the given person
+  # connections <- c(which(probs[idx, ] == 1), which(probs[, idx] == 1)) # find connections
   connections <- which(probs[idx, ] == 1 | probs[, idx] == 1) # find connections
   if (length(connections) == 0) { # no connections
     NA
   } else {
-    connections
+    connections # return vector of connections
   }
 }
 
@@ -19,9 +20,10 @@ get.net <- function(beta, h, nc = 15) {
   probs <- outer(beta, beta) * link_const # initialize probabilities for all pairings
   for (i in 1:n) probs[i, i:n] <- 0 # get rid of double counting
   probs[outer(h, h, FUN = "==")] <- 0 # remove connections within households
-  rands <- matrix(runif(n * n), n, n)
+  # rands <- matrix(runif(n * n), n, n)
+  rands <- runif(n * n)
   probs[probs >= rands] <- 1
-  lapply(seq_along(beta), net_helper, probs)
+  lapply(seq_along(beta), net_helper, probs) # create list containing network
 }
 
 ## part 3
@@ -62,7 +64,7 @@ nseir <- function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2, gamma = .
       next
     }
 
-    # alternative for household exposures
+    # household exposures
     E_prob <- 1 - (((1 - alpha[1])**tabulate(h[pop %in% I], nbins = max(h)))[h[S]]) - runif(length(S))
     E <- c(E, S[E_prob >= 0])
     S <- S[E_prob < 0]
@@ -77,7 +79,7 @@ nseir <- function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2, gamma = .
       next
     }
 
-    # alternative for random exposures
+    # random exposures
     E_prob <- 1 - ((t(matrix(beta[S], nrow = length(S), ncol = length(I))) * beta[I]) * infection_const)
     E_prob <- 1 - apply(E_prob, 2, prod) - runif(length(S))
     E <- c(E, S[E_prob >= 0])
@@ -103,7 +105,7 @@ nseir <- function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2, gamma = .
       next
     }
 
-    # alternative for network exposures
+    # network exposures
     E_prob <- 1 - ((1 - alpha[2])**tabulate(unlist(alink[I]), nbins = n)[S]) - runif(length(S))
     E <- c(E, S[E_prob >= 0])
     S <- S[E_prob < 0]
@@ -130,6 +132,8 @@ plot_nseir <- function(sim, beta) {
 }
 
 # part 5
+Rprof()
+
 n <- 10000
 nc <- 15
 h <- get_h(n)
@@ -143,23 +147,26 @@ alink <- get.net(const_beta, h, nc)
 s3 <- nseir(const_beta, h, alink)
 s4 <- nseir(const_beta, h, alink, alpha = c(0, 0, 0.04))
 
+Rprof(NULL)
+print(summaryRprof())
+
 # plot_nseir(s1, beta)
 # plot_nseir(s2, beta)
 # plot_nseir(s3, const_beta)
 # plot_nseir(s4, const_beta)
 
-plot(s1$t, s1$S, type = "l", xlab = "day", ylim = c(0, n))
-lines(s1$t, s1$I)
-# lines(s1$t, s1$E)
+# plot(s1$t, s1$S, type = "l", xlab = "day", ylim = c(0, n))
+# lines(s1$t, s1$I)
+# # lines(s1$t, s1$E)
 
-lines(s2$t, s2$S, col = 2)
-lines(s2$t, s2$I, col = 2)
-# lines(s2$t, s2$E, col = 2)
+# lines(s2$t, s2$S, col = 2)
+# lines(s2$t, s2$I, col = 2)
+# # lines(s2$t, s2$E, col = 2)
 
-lines(s3$t, s3$S, col = 3)
-lines(s3$t, s3$I, col = 3)
-# lines(s3$t, s3$E, col = 3)
+# lines(s3$t, s3$S, col = 3)
+# lines(s3$t, s3$I, col = 3)
+# # lines(s3$t, s3$E, col = 3)
 
-lines(s4$t, s4$S, col = 4)
-lines(s4$t, s4$I, col = 4)
-# lines(s4$t, s4$E, col = 4)
+# lines(s4$t, s4$S, col = 4)
+# lines(s4$t, s4$I, col = 4)
+# # lines(s4$t, s4$E, col = 4)
