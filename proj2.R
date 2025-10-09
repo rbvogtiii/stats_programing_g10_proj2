@@ -5,7 +5,6 @@ get_h <- function(n, hmax = 5) {
 
 ## part 2
 net_helper <- function(idx, probs) { # creates a list of connections for the given person
-  # connections <- c(which(probs[idx, ] == 1), which(probs[, idx] == 1)) # find connections
   connections <- which(probs[idx, ] == 1 | probs[, idx] == 1) # find connections
   if (length(connections) == 0) { # no connections
     NA
@@ -132,7 +131,7 @@ plot_nseir <- function(sim, beta) {
 }
 
 # part 5
-Rprof()
+# Rprof()
 
 n <- 10000
 nc <- 15
@@ -147,26 +146,26 @@ alink <- get.net(const_beta, h, nc)
 s3 <- nseir(const_beta, h, alink)
 s4 <- nseir(const_beta, h, alink, alpha = c(0, 0, 0.04))
 
-Rprof(NULL)
-print(summaryRprof())
+# Rprof(NULL)
+# print(summaryRprof())
 
 # plot_nseir(s1, beta)
 # plot_nseir(s2, beta)
 # plot_nseir(s3, const_beta)
 # plot_nseir(s4, const_beta)
 
-# plot(s1$t, s1$S, type = "l", xlab = "day", ylim = c(0, n))
-# lines(s1$t, s1$I)
-# # lines(s1$t, s1$E)
+plot(s1$t, s1$S, type = "l", xlab = "day", ylim = c(0, n))
+lines(s1$t, s1$I)
+# lines(s1$t, s1$E)
 
-# lines(s2$t, s2$S, col = 2)
-# lines(s2$t, s2$I, col = 2)
-# # lines(s2$t, s2$E, col = 2)
+lines(s2$t, s2$S, col = 2)
+lines(s2$t, s2$I, col = 2)
+# lines(s2$t, s2$E, col = 2)
 
-# lines(s3$t, s3$S, col = 3)
-# lines(s3$t, s3$I, col = 3)
-# # lines(s3$t, s3$E, col = 3)
+lines(s3$t, s3$S, col = 3)
+lines(s3$t, s3$I, col = 3)
+# lines(s3$t, s3$E, col = 3)
 
-# lines(s4$t, s4$S, col = 4)
-# lines(s4$t, s4$I, col = 4)
-# # lines(s4$t, s4$E, col = 4)
+lines(s4$t, s4$S, col = 4)
+lines(s4$t, s4$I, col = 4)
+# lines(s4$t, s4$E, col = 4)
