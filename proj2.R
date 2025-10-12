@@ -3,6 +3,7 @@ n = 1000 # population size
 hmax = 5 # maximum number of people per household
 
 h <- sample(rep(1:n, times = sample(1:hmax, n, replace = TRUE))[1:n])
+## is this properly uniformly distributed? need to verify
 
 # connection network
 get.net <- function(beta,h,nc=15) {
@@ -114,3 +115,69 @@ nseir <- function(beta,h,alink,alpha=c(.1,.01,.01),delta=.2,gamma=.4,nc=15, nt =
 ## the code can still be made to run in a few seconds for n = 10000, 
 ## especially with careful use of expressions like x[ind1][ind2] <- y in places
 ## (assignment to a subvector of a subvector)." - go back and edit to use this!!
+
+
+## STEP 4
+plot_nseir <- function(result) {
+  
+  y_max <- max(result$S, result$E, result$I, result$R)
+
+  plot(result$t, result$S, type = "n", 
+       xlim = range(result$t), ylim = c(0, y_max),
+       xlab = "Day", ylab = "Number of Individuals")
+
+  # grid(nx=10, ny = 5, col = "gray90", lty = 1)
+  abline(v = seq(0, length(result$t)-1, 10), lty = 1, col = "gray90")
+  abline(h = seq(0, y_max, 100), lty = 1, col = "gray90")
+  
+  ## https://www.nceas.ucsb.edu/sites/default/files/2020-04/colorPaletteCheatsheet.pdf
+  lines(result$t, result$S, col = "lightseagreen", lwd = 3)
+  lines(result$t, result$E, col = "goldenrod2", lwd = 3)
+  lines(result$t, result$I, col = "orangered3", lwd = 3)
+  lines(result$t, result$R, col = "darkgreen", lwd = 3)
+
+  legend("left", 
+         legend = c("Susceptible", "Exposed", "Infectious", "Recovered"),
+         col = c("lightseagreen", "goldenrod2", "orangered3", "darkgreen"),
+         lwd = 3, bty = "n", cex=0.6)
+}
+
+
+
+
+## STEP 5
+
+# generate beta
+beta <- runif(n, 0, 1)
+# generate contact network for beta
+alink <- get.net(beta, h, nc = 15)
+
+# Scenario 1: Full model with default parameters
+scenario1 <- nseir(beta, h, alink)
+
+# Scenario 2: Remove household and network structure (random mixing only)
+scenario2 <- nseir(beta, h, alink, alpha = c(0, 0, 0.04))
+
+# Scenario 3: constant beta (removes variability)
+# create constant beta and corresponding network
+beta_const <- rep(mean(beta), n)
+alink_const <- get.net(beta_const, h, nc = 15)
+scenario3 <- nseir(beta_const, h, alink_const)
+
+# Scenario 4: Constant beta AND random mixing 
+scenario4 <- nseir(beta_constant, h, alink_constant, alpha = c(0, 0, 0.04))
+
+# plotting scenarios:
+par(mfrow = c(2, 2))
+
+plot_nseir(scenario1)
+title(main = "Full Model")
+
+plot_nseir(scenario2)
+title(main = "Random Mixing Only")
+
+plot_nseir(scenario3)
+title(main = "Constant Beta")
+
+plot_nseir(scenario4)
+title(main = "Random Mixing & Constant Beta")
