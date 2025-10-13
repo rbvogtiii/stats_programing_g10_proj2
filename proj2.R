@@ -236,14 +236,14 @@ nseir_3<- function(beta, h, alink, alpha = c(.1, .01, .01), delta = 0.2, gamma =
       break 
     }
     # State Transitions
-    # I -> R and E -> I transitions are already fast
+    # I -> R and E -> I 
     if (length(i_idx) > 0) status[i_idx[runif(length(i_idx)) < delta]] <- 4
     if (length(e_idx) > 0) status[e_idx[runif(length(e_idx)) < gamma]] <- 3
     
     # S -> E Transition
     if (length(s_idx) > 0 && length(i_idx) > 0) {
       
-      # Initialize probability of *avoiding* infection for each susceptible person
+      # Initialise probability of avoiding infection for each susceptible person
       p_avoid <- rep(1, length(s_idx))
       
       # a) Household Infection 
