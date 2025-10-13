@@ -11,7 +11,6 @@ net_helper <- function(idx, probs) { # creates a list of connections for the giv
   } else {
     connections # return vector of connections
   }
-  return(alink)
 }
 
 get.net <- function(beta, h, nc = 15) {
