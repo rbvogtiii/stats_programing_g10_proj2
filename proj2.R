@@ -1,6 +1,6 @@
 ## part 1
 get_h <- function(n, hmax = 5) {
-  rep(1:n, times = sample(1:hmax, n, replace = TRUE))[1:n]
+  sample(rep(1:n, times = sample(1:hmax, n, replace = TRUE))[1:n])
 }
 
 ## part 2
