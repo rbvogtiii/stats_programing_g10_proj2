@@ -27,6 +27,14 @@ get.net <- function(beta, h, nc = 15) {
 
 ## part 3
 nseir <- function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2, gamma = .4, nc = 15, nt = 100, pinf = .005) {
+  # Simulate the movement of people between susceptible, exposed,
+  # infected, and recovered groups. Infected people recover with probability
+  # delta and exposed people become infected with probability gamma.
+  # Susceptible people can be exposed through their household with probability,
+  # alpha[1], through their social network with probabilty alpha[2], or randomly
+  # with a probabilty proportional to the product of their sociability and the
+  # sociability of each currently infected person.
+
   n <- length(beta)
   pop <- 1:n
   I <- sample(pop, n * pinf) # randomly choose pinf% of population to start infected
@@ -64,6 +72,10 @@ nseir <- function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2, gamma = .
     }
 
     # household exposures
+    # We calculate the number of infected people in each
+    # susceptible person's household, use that to find the probability
+    # that they are not exposed by any of them, then use that to
+    # determine the probability they are exposed by at least one
     E_prob <- 1 - (((1 - alpha[1])**tabulate(h[pop %in% I], nbins = max(h)))[h[S]]) - runif(length(S))
     E <- c(E, S[E_prob >= 0])
     S <- S[E_prob < 0]
@@ -79,6 +91,9 @@ nseir <- function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2, gamma = .
     }
 
     # random exposures
+    # We calculate the probability that each infected person will not
+    # expose each member of the susceptible group, then use that to
+    # determine the probability they are exposed by at least one
     E_prob <- 1 - ((t(matrix(beta[S], nrow = length(S), ncol = length(I))) * beta[I]) * infection_const)
     E_prob <- 1 - apply(E_prob, 2, prod) - runif(length(S))
     E <- c(E, S[E_prob >= 0])
@@ -105,6 +120,10 @@ nseir <- function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2, gamma = .
     }
 
     # network exposures
+    # We calculate the number of infected people in each
+    # susceptible person's network, use that to find the probability
+    # that they are not exposed by any of them, then use that to
+    # determine the probability they are exposed by at least one
     E_prob <- 1 - ((1 - alpha[2])**tabulate(unlist(alink[I]), nbins = n)[S]) - runif(length(S))
     E <- c(E, S[E_prob >= 0])
     S <- S[E_prob < 0]
