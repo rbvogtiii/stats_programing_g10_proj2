@@ -3,7 +3,20 @@
 ## Then we compiled our versions and kept the best/most efficient code
 ## We worked together on the compiled version to make edits, add comments, and optimise
 
-## add problem aims / summary of assignment
+## Code to simulate the SEIR model of disease spread:
+## SEIR stands for Susceptible / Exposed / Infectious / Recovered.
+## We assume that a given part of the population is infectious,
+## and the rest of the population is susceptible, on the first day.
+## We then simulate the movements of the population between the four categories.
+## People may be infected by people in their household, 
+## who they see the most, with a given daily probability.
+## There is another set daily probability that they may be infected
+## by a member of their regular network or contacts (which is also simulated).
+## Finally, they may be infected by a random person with a daily probability
+## which is dependent on their "sociability."
+## As well as the above probabilities of moving from state S to E,
+## we model the movement from state E to I with a daily probability of gamma,
+## and the movement from state I to R with a daily probability of delta.
 
 net_helper <- function(idx, probs) {
   ## given a person (idx) and an adjacency matrix (probs),
