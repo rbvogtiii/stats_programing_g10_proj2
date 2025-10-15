@@ -84,7 +84,6 @@ nseir <- function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2, gamma = .
   E_out <- c(length(E))
   I_out <- c(length(I))
   R_out <- c(length(R))
-  sum_out <- c(length(S) + length(E) + length(I) + length(R))
   t <- c(0)
 
   for (day in 1:nt) {
@@ -106,7 +105,6 @@ nseir <- function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2, gamma = .
       E_out <- c(E_out, length(E))
       I_out <- c(I_out, length(I))
       R_out <- c(R_out, length(R))
-      sum_out <- c(sum_out, (length(S) + length(E) + length(I) + length(R)))
       t <- c(t, day)
       next
     }
@@ -126,7 +124,6 @@ nseir <- function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2, gamma = .
       E_out <- c(E_out, length(E))
       I_out <- c(I_out, length(I))
       R_out <- c(R_out, length(R))
-      sum_out <- c(sum_out, (length(S) + length(E) + length(I) + length(R)))
       t <- c(t, day)
       next
     }
@@ -146,7 +143,6 @@ nseir <- function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2, gamma = .
       E_out <- c(E_out, length(E))
       I_out <- c(I_out, length(I))
       R_out <- c(R_out, length(R))
-      sum_out <- c(sum_out, (length(S) + length(E) + length(I) + length(R)))
       t <- c(t, day)
       next
     }
@@ -156,7 +152,6 @@ nseir <- function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2, gamma = .
       E_out <- c(E_out, length(E))
       I_out <- c(I_out, length(I))
       R_out <- c(R_out, length(R))
-      sum_out <- c(sum_out, (length(S) + length(E) + length(I) + length(R)))
       t <- c(t, day)
       next
     }
@@ -177,10 +172,9 @@ nseir <- function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2, gamma = .
     E_out <- c(E_out, length(E))
     I_out <- c(I_out, length(I))
     R_out <- c(R_out, length(R))
-    sum_out <- c(sum_out, (length(S) + length(E) + length(I) + length(R)))
     t <- c(t, day)
   }
-  out <- list(S_out, E_out, I_out, R_out, sum_out, t)
+  out <- list(S_out, E_out, I_out, R_out, t)
   names(out) <- c("S", "E", "I", "R", "Sum", "t")
   out
 }
@@ -192,7 +186,7 @@ plot_nseir <- function(result) {
   ## we plot each of S,E,I,R against time
 
   ## find n to use in scaling the graph axes and grid
-  n <- result$S[1]+result$E[1]+result$I[1]+result$R[1]
+  n <- result$S[1] + result$E[1] + result$I[1] + result$R[1]
 
   ## setting up the empty plot with appropriate axis lengths
   plot(result$t, result$S,
@@ -254,7 +248,7 @@ title(main = "Random Mixing & Constant Beta")
 
 ## Comments on the effect of household and network structures:
 ## When comparing the full model graph to the version which models
-## only random mixing, we see that roughly the same proportion of 
+## only random mixing, we see that roughly the same proportion of
 ## the population is infected during the total course of the model,
 ## as the final number of recovered people is approximately the same.
 ## However, in the "random mixing only" version, the number of exposed
@@ -262,7 +256,7 @@ title(main = "Random Mixing & Constant Beta")
 ## Towards the start of the model, a small proportion of the population
 ## is in the "infectious" category, so the chance of having an infectious
 ## household/network member is lower. Thus, in the earlier days of the
-## simulation, most of the exposure to the disease comes from random 
+## simulation, most of the exposure to the disease comes from random
 ## mixing. In the full model, the higher probabilities of infection
 ## from close contacts cause the household/network infections to dominate
 ## the model. However, when random mixing is considered alone, these
