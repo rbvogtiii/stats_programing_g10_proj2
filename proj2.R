@@ -56,30 +56,30 @@ get.net <- function(beta, h, nc = 15) {
 
 
 nseir <- function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2, gamma = .4, nc = 15, nt = 100, pinf = .005) {
-  # Simulate the movement of people between susceptible, exposed,
-  # infected, and recovered groups, over a specified
-  # number of days. Infected people recover with probability
-  # delta and exposed people become infected with probability gamma.
-  # Susceptible people can be exposed through their household with probability,
-  # alpha[1], through their social network with probability alpha[2], or randomly
-  # with a probability proportional to the product of their sociability and the
-  # sociability of each currently infected person.
+  ## Simulate the movement of people between susceptible, exposed,
+  ## infected, and recovered groups, over a specified
+  ## number of days. Infected people recover with probability
+  ## delta and exposed people become infected with probability gamma.
+  ## Susceptible people can be exposed through their household with probability,
+  ## alpha[1], through their social network with probability alpha[2], or randomly
+  ## with a probability proportional to the product of their sociability and the
+  ## sociability of each currently infected person.
 
 
-  # Initialization of data
+  ## Initialization of data
   n <- length(beta)
   pop <- 1:n
 
-  # Randomly infect a small proportion of the population to start the simulation.
+  ## Randomly infect a small proportion of the population to start the simulation.
   I <- sample(pop, n * pinf)
   S <- pop[!(pop %in% I)] # put rest of population in S
   E <- c()
   R <- c()
 
-  # Identify and compute a scaling constant for random mixing infections.
+  ## Identify and compute a scaling constant for random mixing infections.
   infection_const <- (alpha[3] * nc) / ((mean(beta)**2) * (n - 1))
 
-  # nNitialize storgae vectors for counts
+  ## Initialize storgae vectors for counts
   S_out <- c(length(S))
   E_out <- c(length(E))
   I_out <- c(length(I))
@@ -88,19 +88,19 @@ nseir <- function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2, gamma = .
   t <- c(0)
 
   for (day in 1:nt) {
-    # Moving from I to R Transition
-    # Each infectious person recovers with daily probability delta.
+    ## Moving from I to R Transition
+    ## Each infectious person recovers with daily probability delta.
     R_prob <- delta - runif(length(I))
     R <- c(R, I[R_prob >= 0])
     I_copy <- I[R_prob < 0]
 
-    # Moving from E to I Transition
-    # Each exposed person becomes infectious with daily probability gamma.
+    ## Moving from E to I Transition
+    ## Each exposed person becomes infectious with daily probability gamma.
     I_prob <- gamma - runif(length(E))
     I_copy <- c(I_copy, E[I_prob >= 0])
     E <- E[I_prob < 0]
 
-    # If there are no more infectious individuals i.e the epidemic ends, record results and skip to the following day.
+    ## If there are no more infectious individuals i.e the epidemic ends, record results and skip to the following day.
     if (length(I) == 0) {
       S_out <- c(S_out, length(S))
       E_out <- c(E_out, length(E))
@@ -111,16 +111,16 @@ nseir <- function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2, gamma = .
       next
     }
 
-    # Household exposures
-    # We calculate the number of infected people in each
-    # susceptible person's household, using that to find the probability
-    # that they are not exposed by any of them, then use that to
-    # determine the probability they are exposed by at least one
+    ## Household exposures
+    ## We calculate the number of infected people in each
+    ## susceptible person's household, using that to find the probability
+    ## that they are not exposed by any of them, then use that to
+    ## determine the probability they are exposed by at least one
     E_prob <- 1 - (((1 - alpha[1])**tabulate(h[pop %in% I], nbins = max(h)))[h[S]]) - runif(length(S))
     E <- c(E, S[E_prob >= 0])
     S <- S[E_prob < 0]
 
-    # If the epidemic end out after this step, record and continue to the next day.
+    ## If the epidemic end out after this step, record and continue to the next day
     if (length(I) == 0) {
       S_out <- c(S_out, length(S))
       E_out <- c(E_out, length(E))
@@ -131,16 +131,16 @@ nseir <- function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2, gamma = .
       next
     }
 
-    # Random exposures
-    # We calculate the probability that each infected person will not
-    # expose each member of the susceptible group, then use that to
-    # determine the probability they are exposed to at least one
+    ## Random exposures
+    ## We calculate the probability that each infected person will not
+    ## expose each member of the susceptible group, then use that to
+    ## determine the probability they are exposed to at least one
     E_prob <- 1 - ((t(matrix(beta[S], nrow = length(S), ncol = length(I))) * beta[I]) * infection_const)
     E_prob <- 1 - apply(E_prob, 2, prod) - runif(length(S))
     E <- c(E, S[E_prob >= 0])
     S <- S[E_prob < 0]
 
-    # If the epidemic ends after this step, record and continue to the next day.
+    ## If the epidemic ends after this step, record and continue to the next day
     if (length(I) == 0) {
       S_out <- c(S_out, length(S))
       E_out <- c(E_out, length(E))
@@ -161,18 +161,18 @@ nseir <- function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2, gamma = .
       next
     }
 
-    # Nettwork exposures
-    # We calculate the number of infected people in each
-    # susceptible person's network and use that to find the probability
-    # that they are not exposed by any of them. Then, we determine
-    # the probability they are exposed to at least one
+    ## Network exposures
+    ## We calculate the number of infected people in each
+    ## susceptible person's network and use that to find the probability
+    ## that they are not exposed by any of them. Then, we determine
+    ## the probability they are exposed to at least one
     E_prob <- 1 - ((1 - alpha[2])**tabulate(unlist(alink[I]), nbins = n)[S]) - runif(length(S))
     E <- c(E, S[E_prob >= 0])
     S <- S[E_prob < 0]
 
     I <- I_copy
 
-    # Record the daily count/compartment sizes.
+    ## Record the daily count/compartment sizes.
     S_out <- c(S_out, length(S))
     E_out <- c(E_out, length(E))
     I_out <- c(I_out, length(I))
@@ -235,7 +235,7 @@ s3 <- nseir(const_beta, h, alink)
 ## scenario 4: both random mixing only and constant beta
 s4 <- nseir(const_beta, h, alink, alpha = c(0, 0, 0.04))
 
-# plotting scenarios:
+## plotting scenarios:
 par(mfrow = c(2, 2))
 
 plot_nseir(s1, n)
