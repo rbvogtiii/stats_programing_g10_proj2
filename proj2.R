@@ -175,7 +175,7 @@ nseir <- function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2, gamma = .
     t <- c(t, day)
   }
   out <- list(S_out, E_out, I_out, R_out, t)
-  names(out) <- c("S", "E", "I", "R", "Sum", "t")
+  names(out) <- c("S", "E", "I", "R", "t")
   out
 }
 
