@@ -121,69 +121,102 @@ nseir <- function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2, gamma = .
   out
 }
 
-nseir_3<- function(beta, h, alink, alpha = c(.1, .01, .01), delta = 0.2, gamma = 0.4, nc = 15, nt = 100, pinf = .005) {
-  n <- length(beta)
-  alpha_h <- alpha[1]; alpha_c <- alpha[2]; alpha_r <- alpha[3]
+# DESCRIPTION: Implements an SEIR model incorporating household structure, regular contact networks
+# and random mixing. This function simulates the spread of a disease through a population over a specified
+# number of days (t).
+
+# input beta An n-vector of sociability weights (βi) per person.
+# input h An n-vector of Household IDs.
+# input alink A contact list defining the regular (non-household) contacts for each person (from get.net).
+# input alpha A vector of 3 infection probabilities: c(α_h) for household, (α_c) for contact, and (α_r) for random mixing.
+# input delta The daily transition rate of an Exposed person becoming Infectious (E -> I).
+# input gamma The dailytransition rate of an Infectious person Recovering (I -> R).
+# input nc The average number of (random mixing) contacts per person per day.
+# input nt The number of days to simulate.
+# input pinf The fraction/seed of the population to start in the Infectious state.
+
+# output A list containing vedctors S, E, I, R (total daily population counts) and the day number t(i).
+
+nseir <- function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2, gamma = .4, nc = 15, nt = 100, pinf = .005) {
   
-  infection_const <- (alpha_r * nc) / (mean(beta)^2 * (n - 1))
-  status <- rep(1, n); status[sample(n, max(1, round(n * pinf)))] <- 3
+  # #Initializing conditions of the epidemic. 
+  n <- length(beta)
+  alpha_h <- alpha[1]; alpha_c <- alpha[2]; alpha_r <- alpha[3] # Involves infecting a small subset at the start.
+  
+  infection_const <- ((alpha_r * nc) / (mean(beta)^2 * (n - 1)))  # Constant used to scale random-mixing transmission probabilities. 
+
+  status <- rep(1, n) # Define population states using integers for efficiency.
+
+  # Randomly assign the initial infected individuals and ensure at least one person is infected to start the simulation.
+  num_initial_infected <- max(1, round(n * pinf))
+  initial_infected_idx <- sample(n, num_initial_infected)
+  status[initial_infected_idx] <- 3 # Start in state I
+
+  # Create storage vectors to record the number of people in each stage on day 1. 
   S <- E <- I <- R <- numeric(nt)
   counts <- tabulate(status, nbins = 4)
-  S[1] <- counts[1]; E[1] <- counts[2]; I[1] <- counts[3]; R[1] <- counts[4]
-  random_const <- (alpha_r * nc) / (mean(beta)^2 * (n - 1))
-  
-  # Main Simulation Loop
-  for (t in 2:nt) {
-    s_idx <- which(status == 1)
-    e_idx <- which(status == 2)
-    i_idx <- which(status == 3)
-    
-    if (length(e_idx) == 0 && length(i_idx) == 0) {
-      S[t:nt] <- S[t-1]; E[t:nt] <- 0; I[t:nt] <- 0; R[t:nt] <- R[t-1]
-      break 
-    }
-    # State Transitions
-    # I -> R and E -> I 
-    if (length(i_idx) > 0) status[i_idx[runif(length(i_idx)) < delta]] <- 4
-    if (length(e_idx) > 0) status[e_idx[runif(length(e_idx)) < gamma]] <- 3
-    
-    # S -> E Transition
-    if (length(s_idx) > 0 && length(i_idx) > 0) {
-      
-      # Initialise probability of avoiding infection for each susceptible person
-      p_avoid <- rep(1, length(s_idx))
-      
-      # a) Household Infection 
-      i_by_hh <- table(h[i_idx]) # Count infected in each household
-      s_hh_id <- h[s_idx] # Get household ID for each susceptible
-      k <- i_by_hh[as.character(s_hh_id)] # Lookup count of infected for each susceptible 
-      k[is.na(k)] <- 0 # If household has no infected, count is 0
-      p_avoid <- p_avoid * ((1 - alpha_h)^k) # Probability of avoiding infection from k infectious housemates
-      
-      # b) Regular Contact Infection
-      is_inf <- status == 3 # Create a logical vector for quick lookups
-      m <- unlist(lapply(alink[s_idx], function(contacts) sum(is_inf[contacts])))
-      p_avoid <- p_avoid * ((1 - alpha_c)^m)
-      
-      # c) Random Mixing Infection 
-      # This calculates the total random mixing pressure from all infected at once
-      total_random_pressure <- infection_const * sum(beta[i_idx]) * beta[s_idx]
-      p_avoid <- p_avoid * exp(-total_random_pressure)
-      
-      # Final Bernoulli trial to find newly exposed individuals
-      p_infect <- 1 - p_avoid
-      newly_exposed_idx <- s_idx[runif(length(s_idx)) < p_infect]
-      status[newly_exposed_idx] <- 2
-    }
-    
-    # Record Results
-    counts <- tabulate(status, nbins = 4)
-    S[t] <- counts[1]; E[t] <- counts[2]; I[t] <- counts[3]; R[t] <- counts[4]
-  }
-  
-  return(list(S = S, E = E, I = I, R = R, t = 1:nt))
-}
 
+  S[1] <- counts[1]; E[1] <- counts[2]; I[1] <- counts[3]; R[1] <- counts[4]
+
+  # Main Simulation Loop identifying indices of people in each stage
+   for (t in 2:nt) {
+   # Identify indices of individuals in each state at the start of the day.
+   s_idx <- which(status == 1)
+   e_idx <- which(status == 2)
+   i_idx <- which(status == 3)
+   
+   #If no person is infected or exposed, the epidemic will have ended.
+   if (length(e_idx) == 0 && length(i_idx) == 0) {
+     # Fill the remaining days with the last recorded values and break the loop.
+     S[t:nt] <- S[t-1]; E[t:nt] <- 0; I[t:nt] <- 0; R[t:nt] <- R[t-1]
+     break
+   }
+   
+   # State Transitions: depend on the state at the start of the day.
+   
+   # Each infectious person recovers (I -> R) with daily probability delta.
+   if (length(i_idx) > 0) {
+     status[i_idx[runif(length(i_idx)) < delta]] <- 4
+   }
+   
+   # [cite_start]Each exposed person becomes infectious (E -> I) with daily probability gamma. 
+   if (length(e_idx) > 0) {
+     status[e_idx[runif(length(e_idx)) < gamma]] <- 3
+   }
+   
+   # State S -> E Transition
+   # New infections are based on who was infectious at the starting point of the day (i_idx).
+   if (length(s_idx) > 0 && length(i_idx) > 0) {
+     
+     # Initialize probability of avoiding infection for each susceptible person (from all sources)
+     p_avoid <- rep(1, length(s_idx))
+     
+     # a) Household Transmission
+     i_per_hh <- tabulate(h[i_idx], nbins = max(h)) # Count the number of infectious individuals in each household.
+     k <- i_per_hh[h[s_idx]] # For each susceptible person, find the number of infectious housemates (k).
+     p_avoid <- p_avoid * ((1 - alpha_h)^k) # Update avoidance probability.
+     
+     # b) Regular Contact Network Transmission 
+     is_infectious_bool <- status == 3 
+     m <- sapply(alink[s_idx], function(contacts) sum(is_infectious_bool[contacts]))  # For each susceptible person, count their infected contacts (m).
+     p_avoid <- p_avoid * ((1 - alpha_c)^m)  # Update avoidance probability:
+     
+     # c) Random Mixing Transmission : this calculates the total random mixing pressure from all infected persons
+     total_random_pressure <- infection_const * sum(beta[i_idx]) * beta[s_idx]  
+     p_avoid <- p_avoid * exp(-total_random_pressure) # Probability of avoiding infection from random mixing (using a Poisson approximation).
+     
+     p_infect <- 1 - p_avoid  # The total probability of getting infected is 1 minus the total probability of avoidance.
+     
+     newly_exposed_idx <- s_idx[runif(length(s_idx)) < p_infect] # Find and infect newly exposed people using a Bernoulli Trial (to see if they get infected) 
+     status[newly_exposed_idx] <- 2 # Move newly infected people to Exposed state.
+   }
+   
+   # Record the day's results
+   counts <- tabulate(status, nbins = 4)
+   S[t] <- counts[1]; E[t] <- counts[2]; I[t] <- counts[3]; R[t] <- counts[4]
+ }
+return(list(S = S, E = E, I = I, R = R, t = 1:nt))
+}
 
 
 ## STEP 4
