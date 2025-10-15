@@ -89,13 +89,13 @@ nseir <- function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2, gamma = .
   
   for (day in 1:nt) {
     # Moving from E to I Transition
-    # Each exposed person becomes infectious with daily probability delta.
+    # Each exposed person becomes infectious with daily probability gamma.
     I_prob <- gamma - runif(length(E))
     I <- c(I, E[I_prob >= 0])
     E <- E[I_prob < 0]
     
     # Moving from I to R Transition 
-    # Each infectious person recovers with daily probability gamma.
+    # Each infectious person recovers with daily probability delta.
     R_prob <- delta - runif(length(I))
     R <- c(R, I[R_prob >= 0])
     I <- I[R_prob < 0]
