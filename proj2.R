@@ -8,7 +8,7 @@
 ## We assume that a given part of the population is infectious,
 ## and the rest of the population is susceptible, on the first day.
 ## We then simulate the movements of the population between the four categories.
-## People may be infected by people in their household, 
+## People may be infected by people in their household,
 ## who they see the most, with a given daily probability.
 ## There is another set daily probability that they may be infected
 ## by a member of their regular network or contacts (which is also simulated).
@@ -64,21 +64,21 @@ nseir <- function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2, gamma = .
   # alpha[1], through their social network with probability alpha[2], or randomly
   # with a probability proportional to the product of their sociability and the
   # sociability of each currently infected person.
-  
-  
-  # Initialization of data 
+
+
+  # Initialization of data
   n <- length(beta)
   pop <- 1:n
-  
+
   # Randomly infect a small proportion of the population to start the simulation.
-  I <- sample(pop, n * pinf) 
+  I <- sample(pop, n * pinf)
   S <- pop[!(pop %in% I)] # put rest of population in S
   E <- c()
   R <- c()
-  
-  # Identify and compute a scaling constant for random mixing infections. 
+
+  # Identify and compute a scaling constant for random mixing infections.
   infection_const <- (alpha[3] * nc) / ((mean(beta)**2) * (n - 1))
-  
+
   # nNitialize storgae vectors for counts
   S_out <- c(length(S))
   E_out <- c(length(E))
@@ -86,20 +86,20 @@ nseir <- function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2, gamma = .
   R_out <- c(length(R))
   sum_out <- c(length(S) + length(E) + length(I) + length(R))
   t <- c(0)
-  
+
   for (day in 1:nt) {
-    # Moving from E to I Transition
-    # Each exposed person becomes infectious with daily probability gamma.
-    I_prob <- gamma - runif(length(E))
-    I <- c(I, E[I_prob >= 0])
-    E <- E[I_prob < 0]
-    
-    # Moving from I to R Transition 
+    # Moving from I to R Transition
     # Each infectious person recovers with daily probability delta.
     R_prob <- delta - runif(length(I))
     R <- c(R, I[R_prob >= 0])
-    I <- I[R_prob < 0]
-    
+    I_copy <- I[R_prob < 0]
+
+    # Moving from E to I Transition
+    # Each exposed person becomes infectious with daily probability gamma.
+    I_prob <- gamma - runif(length(E))
+    I_copy <- c(I_copy, E[I_prob >= 0])
+    E <- E[I_prob < 0]
+
     # If there are no more infectious individuals i.e the epidemic ends, record results and skip to the following day.
     if (length(I) == 0) {
       S_out <- c(S_out, length(S))
@@ -110,7 +110,7 @@ nseir <- function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2, gamma = .
       t <- c(t, day)
       next
     }
-    
+
     # Household exposures
     # We calculate the number of infected people in each
     # susceptible person's household, using that to find the probability
@@ -119,7 +119,7 @@ nseir <- function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2, gamma = .
     E_prob <- 1 - (((1 - alpha[1])**tabulate(h[pop %in% I], nbins = max(h)))[h[S]]) - runif(length(S))
     E <- c(E, S[E_prob >= 0])
     S <- S[E_prob < 0]
-    
+
     # If the epidemic end out after this step, record and continue to the next day.
     if (length(I) == 0) {
       S_out <- c(S_out, length(S))
@@ -130,7 +130,7 @@ nseir <- function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2, gamma = .
       t <- c(t, day)
       next
     }
-    
+
     # Random exposures
     # We calculate the probability that each infected person will not
     # expose each member of the susceptible group, then use that to
@@ -139,7 +139,7 @@ nseir <- function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2, gamma = .
     E_prob <- 1 - apply(E_prob, 2, prod) - runif(length(S))
     E <- c(E, S[E_prob >= 0])
     S <- S[E_prob < 0]
-    
+
     # If the epidemic ends after this step, record and continue to the next day.
     if (length(I) == 0) {
       S_out <- c(S_out, length(S))
@@ -150,7 +150,7 @@ nseir <- function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2, gamma = .
       t <- c(t, day)
       next
     }
-    
+
     if (length(unlist(alink[I])) == 0) {
       S_out <- c(S_out, length(S))
       E_out <- c(E_out, length(E))
@@ -160,16 +160,18 @@ nseir <- function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2, gamma = .
       t <- c(t, day)
       next
     }
-    
+
     # Nettwork exposures
     # We calculate the number of infected people in each
     # susceptible person's network and use that to find the probability
-    # that they are not exposed by any of them. Then, we determine 
+    # that they are not exposed by any of them. Then, we determine
     # the probability they are exposed to at least one
     E_prob <- 1 - ((1 - alpha[2])**tabulate(unlist(alink[I]), nbins = n)[S]) - runif(length(S))
     E <- c(E, S[E_prob >= 0])
     S <- S[E_prob < 0]
-    
+
+    I <- I_copy
+
     # Record the daily count/compartment sizes.
     S_out <- c(S_out, length(S))
     E_out <- c(E_out, length(E))
@@ -184,30 +186,33 @@ nseir <- function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2, gamma = .
 }
 
 plot_nseir <- function(result, n) {
-  ## function to plot solutions, 
+  ## function to plot solutions,
   ## where "result" is an output from the nseir function
   ## so it contains vectors S,E,I,R,t
   ## we plot each of S,E,I,R against time
   ## n is used in scaling the graph axes and grid
 
-  ## setting up the empty plot with appropriate axis lengths  
-  plot(result$t, result$S, type = "n", xlim = range(result$t), ylim = c(0, n),
-       xlab = "Day", ylab = "Number of Individuals")
-  
+  ## setting up the empty plot with appropriate axis lengths
+  plot(result$t, result$S,
+    type = "n", xlim = range(result$t), ylim = c(0, n),
+    xlab = "Day", ylab = "Number of Individuals"
+  )
+
   ## adding a grid for ease of reading results
-  abline(v = seq(0, length(result$t)-1, 10), lty = 1, col = "gray90")
-  abline(h = seq(0, n, n/10), lty = 1, col = "gray90")
-  
+  abline(v = seq(0, length(result$t) - 1, 10), lty = 1, col = "gray90")
+  abline(h = seq(0, n, n / 10), lty = 1, col = "gray90")
+
   ## plotting the number of people in each category over time
   lines(result$t, result$S, col = "lightseagreen", lwd = 3)
   lines(result$t, result$E, col = "goldenrod2", lwd = 3)
   lines(result$t, result$I, col = "orangered3", lwd = 3)
   lines(result$t, result$R, col = "darkgreen", lwd = 3)
-  
-  legend("left", 
-         legend = c("Susceptible", "Exposed", "Infectious", "Recovered"),
-         col = c("lightseagreen", "goldenrod2", "orangered3", "darkgreen"),
-         lwd = 3, bty = "n", cex=0.6)
+
+  legend("left",
+    legend = c("Susceptible", "Exposed", "Infectious", "Recovered"),
+    col = c("lightseagreen", "goldenrod2", "orangered3", "darkgreen"),
+    lwd = 3, bty = "n", cex = 0.6
+  )
 }
 
 
@@ -233,14 +238,14 @@ s4 <- nseir(const_beta, h, alink, alpha = c(0, 0, 0.04))
 # plotting scenarios:
 par(mfrow = c(2, 2))
 
-plot_nseir(s1,n)
+plot_nseir(s1, n)
 title(main = "Full Model")
 
-plot_nseir(s2,n)
+plot_nseir(s2, n)
 title(main = "Random Mixing Only")
 
-plot_nseir(s3,n)
+plot_nseir(s3, n)
 title(main = "Constant Beta")
 
-plot_nseir(s4,n)
+plot_nseir(s4, n)
 title(main = "Random Mixing & Constant Beta")
