@@ -249,3 +249,20 @@ title(main = "Constant Beta")
 
 plot_nseir(s4, n)
 title(main = "Random Mixing & Constant Beta")
+
+## Comments on the effect of household and network structures:
+## When comparing the full model graph to the version which models
+## only random mixing, we see that roughly the same proportion of 
+## the population is infected during the total course of the model,
+## as the final number of recovered people is approximately the same.
+## However, in the "random mixing only" version, the number of exposed
+## or infectious people spikes more rapidly towards the start of the model.
+## Towards the start of the model, a small proportion of the population
+## is in the "infectious" category, so the chance of having an infectious
+## household/network member is lower. Thus, in the earlier days of the
+## simulation, most of the exposure to the disease comes from random 
+## mixing. In the full model, the higher probabilities of infection
+## from close contacts cause the household/network infections to dominate
+## the model. However, when random mixing is considered alone, these
+## higher probabilities do not come into effect, so the rate of infection
+## subsides more rapidly.
