@@ -5,21 +5,32 @@
 
 ## add problem aims / summary of assignment
 
-get_h <- function(n, hmax = 5) {
-  ## given a population size of n, the population is sorted into households
-  ## hmax is the cap on household sizes, with size uniformly distributed from 1 to hmax
-  sample(rep(1:n, times = sample(1:hmax, n, replace = TRUE))[1:n])
-}
-
-## update comments/function explanation
-net_helper <- function(idx, probs) { 
-  ## creates a list of connections for the given person
+net_helper <- function(idx, probs) {
+  ## given a person (idx) and an adjacency matrix (probs),
+  ## return a list of that person's connections
   connections <- which(probs[idx, ] == 1 | probs[, idx] == 1) # find connections
   if (length(connections) == 0) { # no connections
     NA
   } else {
     connections # return vector of connections
   }
+}
+
+get.net <- function(beta, h, nc = 15) {
+  ## Given a vector containing a sociability parameter for each member of
+  ## the population (beta), a vector containing each person's household (h),
+  ## and the average number of connections each person should have, return a
+  ## list where the element corresponding to a given person contains their
+  ## network. The probablility that two people are connected is proportional
+  ## to their sociability parameter.
+  n <- length(beta)
+  link_const <- nc / ((mean(beta)**2) * (n - 1))
+  probs <- outer(beta, beta) * link_const # initialize probabilities for all pairings
+  for (i in 1:n) probs[i, i:n] <- 0 # get rid of double counting
+  probs[outer(h, h, FUN = "==")] <- 0 # remove connections within households
+  rands <- runif(n * n)
+  probs[probs >= rands] <- 1
+  lapply(seq_along(beta), net_helper, probs) # create list containing network
 }
 
 get.net <- function(beta, h, nc = 15) {
