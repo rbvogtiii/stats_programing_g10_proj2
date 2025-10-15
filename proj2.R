@@ -2,6 +2,7 @@
 ## Ailbhe Rogers: S2837175
 ## Bradley Vogt: S2904278
 ## Alejandra Hacking Burguera: S2811518
+## github repo: https://github.com/rbvogtiii/stats_programing_g10_proj2
 
 ## Work was evenly distributed between all group members
 ## First, we each created our own solution to the project
