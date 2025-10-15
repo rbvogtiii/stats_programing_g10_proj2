@@ -8,11 +8,11 @@
 net_helper <- function(idx, probs) {
   ## given a person (idx) and an adjacency matrix (probs),
   ## return a list of that person's connections
-  connections <- which(probs[idx, ] == 1 | probs[, idx] == 1) # find connections
-  if (length(connections) == 0) { # no connections
+  connections <- which(probs[idx, ] == 1 | probs[, idx] == 1) ## find connections
+  if (length(connections) == 0) { ## no connections
     NA
   } else {
-    connections # return vector of connections
+    connections ## return vector of connections
   }
 }
 
@@ -25,12 +25,12 @@ get.net <- function(beta, h, nc = 15) {
   ## to their sociability parameter.
   n <- length(beta)
   link_const <- nc / ((mean(beta)**2) * (n - 1))
-  probs <- outer(beta, beta) * link_const # initialize probabilities for all pairings
-  for (i in 1:n) probs[i, i:n] <- 0 # get rid of double counting
-  probs[outer(h, h, FUN = "==")] <- 0 # remove connections within households
+  probs <- outer(beta, beta) * link_const ## initialize probabilities for all pairings
+  for (i in 1:n) probs[i, i:n] <- 0 ## get rid of double counting
+  probs[outer(h, h, FUN = "==")] <- 0 ## remove connections within households
   rands <- runif(n * n)
   probs[probs >= rands] <- 1
-  lapply(seq_along(beta), net_helper, probs) # create list containing network
+  lapply(seq_along(beta), net_helper, probs) ## create list containing network
 }
 
 get.net <- function(beta, h, nc = 15) {
