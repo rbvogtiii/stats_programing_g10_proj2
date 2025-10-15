@@ -18,6 +18,14 @@
 ## we model the movement from state E to I with a daily probability of gamma,
 ## and the movement from state I to R with a daily probability of delta.
 
+
+get_h <- function(n, hmax = 5) {
+  ## given a population size of n, the population is sorted into households
+  ## hmax is the cap on household sizes, with size uniformly distributed from 1 to hmax
+  sample(rep(1:n, times = sample(1:hmax, n, replace = TRUE))[1:n])
+}
+
+
 net_helper <- function(idx, probs) {
   ## given a person (idx) and an adjacency matrix (probs),
   ## return a list of that person's connections
@@ -44,18 +52,6 @@ get.net <- function(beta, h, nc = 15) {
   rands <- runif(n * n)
   probs[probs >= rands] <- 1
   lapply(seq_along(beta), net_helper, probs) ## create list containing network
-}
-
-get.net <- function(beta, h, nc = 15) {
-  n <- length(beta)
-  link_const <- nc / ((mean(beta)**2) * (n - 1))
-  probs <- outer(beta, beta) * link_const # initialize probabilities for all pairings
-  for (i in 1:n) probs[i, i:n] <- 0 # get rid of double counting
-  probs[outer(h, h, FUN = "==")] <- 0 # remove connections within households
-  # rands <- matrix(runif(n * n), n, n)
-  rands <- runif(n * n)
-  probs[probs >= rands] <- 1
-  lapply(seq_along(beta), net_helper, probs) # create list containing network
 }
 
 
