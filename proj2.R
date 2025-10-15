@@ -185,12 +185,14 @@ nseir <- function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2, gamma = .
   out
 }
 
-plot_nseir <- function(result, n) {
+plot_nseir <- function(result) {
   ## function to plot solutions,
   ## where "result" is an output from the nseir function
   ## so it contains vectors S,E,I,R,t
   ## we plot each of S,E,I,R against time
-  ## n is used in scaling the graph axes and grid
+
+  ## find n to use in scaling the graph axes and grid
+  n <- result$S[1]+result$E[1]+result$I[1]+result$R[1]
 
   ## setting up the empty plot with appropriate axis lengths
   plot(result$t, result$S,
@@ -238,16 +240,16 @@ s4 <- nseir(const_beta, h, alink, alpha = c(0, 0, 0.04))
 ## plotting scenarios:
 par(mfrow = c(2, 2))
 
-plot_nseir(s1, n)
+plot_nseir(s1)
 title(main = "Full Model")
 
-plot_nseir(s2, n)
+plot_nseir(s2)
 title(main = "Random Mixing Only")
 
-plot_nseir(s3, n)
+plot_nseir(s3)
 title(main = "Constant Beta")
 
-plot_nseir(s4, n)
+plot_nseir(s4)
 title(main = "Random Mixing & Constant Beta")
 
 ## Comments on the effect of household and network structures:
