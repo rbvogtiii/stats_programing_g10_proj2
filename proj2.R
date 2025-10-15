@@ -59,18 +59,6 @@ get.net <- function(beta, h, nc = 15) {
 }
 
 
-
-# input beta An n-vector of sociability weights per person.
-# input h An n-vector of Household IDs.
-# input alink A contact list defining the regular (non-household) contacts for each person (from get.net).
-# input delta The daily transition rate of an Exposed person becoming Infectious (E -> I).
-# input gamma The daily transition rate of an Infectious person Recovering (I -> R).
-# input nc The average number of (random mixing) contacts per person per day.
-# input nt The number of days to simulate.
-# input pinf The fraction/seed of the population to start in the infectious state.
-
-# output A list containing vectors S, E, I, R (total daily population counts) and the day number t(i).
-
 nseir <- function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2, gamma = .4, nc = 15, nt = 100, pinf = .005) {
   # Simulate the movement of people between susceptible, exposed,
   # infected, and recovered groups, over a specified
