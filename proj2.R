@@ -1,3 +1,9 @@
+## Work was evenly distributed between all group members
+## First, we each created our own solution to the project
+## Then we compiled our versions and kept the best/most efficient code
+## We worked together on the compiled version to make edits, add comments, and optimise
+
+
 ## part 1
 get_h <- function(n, hmax = 5) {
   sample(rep(1:n, times = sample(1:hmax, n, replace = TRUE))[1:n])
