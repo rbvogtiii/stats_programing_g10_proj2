@@ -1,3 +1,8 @@
+## Team 10:
+## Ailbhe Rogers: S2837175
+## Bradley Vogt: S2904278
+## Alejandra Hacking Burguera: S2811518
+
 ## Work was evenly distributed between all group members
 ## First, we each created our own solution to the project
 ## Then we compiled our versions and kept the best/most efficient code
@@ -8,11 +13,11 @@
 ## We assume that a given part of the population is infectious,
 ## and the rest of the population is susceptible, on the first day.
 ## We then simulate the movements of the population between the four categories.
-## People may be infected by people in their household,
+## People may be exposed to the disease by people in their household,
 ## who they see the most, with a given daily probability.
-## There is another set daily probability that they may be infected
+## There is another set daily probability that they may be exposed
 ## by a member of their regular network or contacts (which is also simulated).
-## Finally, they may be infected by a random person with a daily probability
+## Finally, they may be exposed by a random person with a daily probability
 ## which is dependent on their "sociability."
 ## As well as the above probabilities of moving from state S to E,
 ## we model the movement from state E to I with a daily probability of gamma,
@@ -30,7 +35,7 @@ net_helper <- function(idx, probs) {
   ## given a person (idx) and an adjacency matrix (probs),
   ## return a list of that person's connections
   connections <- which(probs[idx, ] == 1 | probs[, idx] == 1) ## find connections
-  if (length(connections) == 0) { ## no connections
+  if (length(connections) == 0) { ## if no connections
     NA
   } else {
     connections ## return vector of connections
@@ -57,13 +62,13 @@ get.net <- function(beta, h, nc = 15) {
 
 nseir <- function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2, gamma = .4, nc = 15, nt = 100, pinf = .005) {
   ## Simulate the movement of people between susceptible, exposed,
-  ## infected, and recovered groups, over a specified
-  ## number of days. Infected people recover with probability
-  ## delta and exposed people become infected with probability gamma.
+  ## infectious, and recovered groups, over a specified
+  ## number of days. Infectious people recover with probability
+  ## delta and exposed people become infectious with probability gamma.
   ## Susceptible people can be exposed through their household with probability,
   ## alpha[1], through their social network with probability alpha[2], or randomly
   ## with a probability proportional to the product of their sociability and the
-  ## sociability of each currently infected person.
+  ## sociability of each currently infectious person.
 
 
   ## Initialization of data
@@ -96,6 +101,7 @@ nseir <- function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2, gamma = .
     ## Moving from E to I Transition
     ## Each exposed person becomes infectious with daily probability gamma.
     I_prob <- gamma - runif(length(E))
+    ## work with a copy of I so that newly infectious people cannot infect susceptible people in the same day
     I_copy <- c(I_copy, E[I_prob >= 0])
     E <- E[I_prob < 0]
 
@@ -110,7 +116,7 @@ nseir <- function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2, gamma = .
     }
 
     ## Household exposures
-    ## We calculate the number of infected people in each
+    ## We calculate the number of infectious people in each
     ## susceptible person's household, using that to find the probability
     ## that they are not exposed by any of them, then use that to
     ## determine the probability they are exposed by at least one
@@ -129,7 +135,7 @@ nseir <- function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2, gamma = .
     }
 
     ## Random exposures
-    ## We calculate the probability that each infected person will not
+    ## We calculate the probability that each infectious person will not
     ## expose each member of the susceptible group, then use that to
     ## determine the probability they are exposed to at least one
     E_prob <- 1 - ((t(matrix(beta[S], nrow = length(S), ncol = length(I))) * beta[I]) * infection_const)
@@ -157,7 +163,7 @@ nseir <- function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2, gamma = .
     }
 
     ## Network exposures
-    ## We calculate the number of infected people in each
+    ## We calculate the number of infectious people in each
     ## susceptible person's network and use that to find the probability
     ## that they are not exposed by any of them. Then, we determine
     ## the probability they are exposed to at least one
