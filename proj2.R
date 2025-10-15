@@ -238,30 +238,36 @@ return(list(S = S, E = E, I = I, R = R, t = 1:nt))
 }
 
 
-## STEP 4
-plot_nseir <- function(result) {
-  
-  y_max <- max(result$S, result$E, result$I, result$R)
+plot_nseir <- function(result, n) {
+  ## function to plot solutions, 
+  ## where "result" is an output from the nseir function
+  ## so it contains vectors S,E,I,R,t
+  ## we plot each of S,E,I,R against time
 
-  plot(result$t, result$S, type = "n", 
-       xlim = range(result$t), ylim = c(0, y_max),
+  # sets up the empty plot with appropriate axis lengths etc  
+  plot(result$t, result$S, type = "n", xlim = range(result$t), ylim = c(0, n),
        xlab = "Day", ylab = "Number of Individuals")
-
-  # grid(nx=10, ny = 5, col = "gray90", lty = 1)
+  
+  # adding a grid for ease of reading results
   abline(v = seq(0, length(result$t)-1, 10), lty = 1, col = "gray90")
-  abline(h = seq(0, y_max, 100), lty = 1, col = "gray90")
+  abline(h = seq(0, n, n/10), lty = 1, col = "gray90")
   
   ## https://www.nceas.ucsb.edu/sites/default/files/2020-04/colorPaletteCheatsheet.pdf
+  # plotting the number of susceptible people over time
   lines(result$t, result$S, col = "lightseagreen", lwd = 3)
+  # plotting the number of exposed people over time
   lines(result$t, result$E, col = "goldenrod2", lwd = 3)
+  # plotting the number of infectious people over time
   lines(result$t, result$I, col = "orangered3", lwd = 3)
+  # plotting the number of recovered people over time
   lines(result$t, result$R, col = "darkgreen", lwd = 3)
-
+  
   legend("left", 
          legend = c("Susceptible", "Exposed", "Infectious", "Recovered"),
          col = c("lightseagreen", "goldenrod2", "orangered3", "darkgreen"),
          lwd = 3, bty = "n", cex=0.6)
 }
+
 
 # part 5
 # Rprof()
