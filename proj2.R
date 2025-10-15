@@ -165,7 +165,7 @@ alink_const <- get.net(beta_const, h, nc = 15)
 scenario3 <- nseir(beta_const, h, alink_const)
 
 # Scenario 4: Constant beta AND random mixing 
-scenario4 <- nseir(beta_constant, h, alink_constant, alpha = c(0, 0, 0.04))
+scenario4 <- nseir(beta_const, h, alink_const, alpha = c(0, 0, 0.04))
 
 # plotting scenarios:
 par(mfrow = c(2, 2))
